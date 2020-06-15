@@ -1,0 +1,159 @@
+%% This script measure max/min hight of the surface, and volume of uplifted material.
+% Torjus Ellingsen 2020
+
+% clear all
+% 
+% load ('DEM3.mat') % Load presave data
+% load ('DEM4.mat')
+% load ('DEM5.mat')
+% load ('DEM6.mat')
+% load ('DEM7.mat')
+% load ('DEM8.mat')
+% 
+% %for voume measuremnts: 
+% GB3 = load('GB3.mat');
+% GB4 = load('GB4.mat');
+% GB5 = load('GB5.mat');
+% GB6 = load('GB6.mat');
+% GB7 = load('GB7.mat');
+% GB8 = load('GB8.mat');
+
+
+%% Convert timstep to displacement
+[T,sz_el]=size(max4);
+for i= 1:T
+    disp(i) = i/140*78;   %timestep(i)/tot-timestep * tot_displ (mm)
+end
+
+w3 = zeros(T,sz_el);
+%% Plot all
+h = figure;
+h1 = plot(disp,movmean(max3*1000,5),'color',[0.91 0.5 0.17]);
+hold on;
+h2 = plot(disp,movmean(min3*1000,5),'color',[0.91 0.5 0.17]);
+h3 = plot(disp,movmean(max4*1000,5),'color','c');
+
+h4 = plot(disp,movmean(min4*1000,5),'color','c');
+h5 = plot(disp,movmean(max5*1000,5),'color',[1 0 0]);
+h6 = plot(disp,movmean(min5*1000,5),'color',[1 0 0]);
+h7 = plot(disp,movmean(max6*1000,5),'color',[0.7 0.7 0.7]);
+h8 = plot(disp,movmean(min6*1000,5),'color',[0.7 0.7 0.7]);
+h9 = plot(disp,movmean(min7*1000,5),'color',[0.45 0.9 0.15]);
+h10 = plot(disp,movmean(max7*1000,5),'color',[0.45 0.9 0.15]);
+h11 = plot(disp,max8*1000,'color','k');
+h12 = plot(disp,movmean(min8*1000,5),'color','k');
+xlabel('Displacement [mm]');
+ylabel('Vertical uplift & subsidence [mm]');
+title('Max and min topography,Glass beads')
+legend([h1,h3,h5,h7,h9,h11],'3 cm','4cm','5cm','6cm','7cm','8cm','Location','northwest');
+axis([0 80 -8.2 7]);
+grid on;
+hold off
+saveas(h,'max_min_topo.pdf')
+clear h
+
+
+%% Volume plot
+h = figure;
+plot(disp,movmean(vol3*10^9,5),'color',[0.91 0.5 0.17]);
+hold on;
+plot(disp,movmean(vol4*10^9,5),'color','c');
+
+plot(disp,movmean(vol5*10^9,5),'color',[1 0 0]);
+plot(disp,movmean(vol6*10^9,5),'color',[0.7 0.7 0.7]);
+plot(disp,movmean(vol7*10^9,5),'color',[0.45 0.9 0.15]);
+plot(disp,movmean(vol8*10^9,5),'color','k');
+
+ylabel('Volume uplifted [mm^3]');
+xlabel('Displacement');
+legend('3 cm','4cm','5cm','6cm','7cm','8cm','Location','northwest');
+grid on;
+hold off
+saveas(h,'volume.pdf')
+clear h
+%% Volume subsidence plot
+h = figure;
+plot(disp,movmean(vol3_down*10^9,5),'color',[0.91 0.5 0.17]);
+hold on;
+plot(disp,movmean(vol4_down*10^9,5),'color','c');
+
+plot(disp,movmean(vol5_down*10^9,5),'color',[1 0 0]);
+plot(disp,movmean(vol6_down*10^9,5),'color',[0.7 0.7 0.7]);
+plot(disp,movmean(vol7_down*10^9,5),'color',[0.45 0.9 0.15]);
+plot(disp,movmean(vol8_down*10^9,5),'color','k');
+
+ylabel('Volume uplifted [mm^3]');
+xlabel('Displacement');
+legend('3 cm','4cm','5cm','6cm','7cm','8cm','Location','southwest');
+grid on;
+hold off
+saveas(h,'subsidence.pdf')
+clear h
+%% Volume flux plot
+h = figure;
+plot(disp,movmean((vol3-vol3_down)*10^9,5),'color',[0.91 0.5 0.17]);
+hold on;
+plot(disp,movmean((vol4-vol4_down)*10^9,5),'color','c');
+
+plot(disp,movmean((vol5-vol5_down)*10^9,5),'color',[1 0 0]);
+plot(disp,movmean((vol6-vol6_down)*10^9,5),'color',[0.7 0.7 0.7]);
+plot(disp,movmean((vol7-vol7_down)*10^9,5),'color',[0.45 0.9 0.15]);
+plot(disp,movmean((vol8-vol8_down)*10^9,5),'color','k');
+
+ylabel('Volume uplifted – subsidence [mm^3]');
+xlabel('Displacement');
+legend('3 cm','4cm','5cm','6cm','7cm','8cm','Location','northwest');
+grid on;
+hold off
+saveas(h,'volume_up-down.pdf')
+clear h
+%%
+sz_el3 = GB3.sz_el;
+sz_el4 = GB4.sz_el;
+sz_el5 = GB5.sz_el;
+sz_el6 = GB6.sz_el;
+sz_el7 = GB7.sz_el;
+sz_el8 = GB8.sz_el;
+
+%% Volume vs depth/length/width plot
+h = figure;
+% 
+plot(disp,(movmean((vol3*10^9)/(200*30*(movmean(sz_el3,5))),5)),'color',[0.91 0.5 0.17]);
+hold on;
+plot(disp,(movmean((vol4*10^9)/(200*40*(movmean(sz_el4,5))),5)),'color','c');
+
+plot(disp,(movmean((vol5*10^9)/(200*50*(movmean(sz_el5,5))),5)),'color',[1 0 0]);
+plot(disp,(movmean((vol6*10^9)/(200*60*(movmean(sz_el6,5))),5)),'color',[0.7 0.7 0.7]);
+plot(disp,(movmean((vol7*10^9)/(200*70*(movmean(sz_el7,5))),5)),'color',[0.45 0.9 0.15]);
+plot(disp,(movmean((vol8*10^9)/(200*80*(movmean(sz_el8,5))),5)),'color','k');
+
+ylabel('Uplifted volume [mm^3] / Volume of fault column [mm^3]');
+xlabel('Displacement [mm]');
+legend('3 cm','4cm','5cm','6cm','7cm','8cm','Location','northeast');
+grid on;
+hold off
+saveas(h,'volume_vs_column.pdf')
+clear h
+
+%% Max uplifted Volume vs depth/length/width
+h = figure;
+hold on
+plot(max(max(movmean(sz_el3,5)))/30,max(movmean(vol3,5))*10^9/(200*30*(max(max(sz_el3)))),'*','color',[0.91 0.5 0.17]);
+
+plot(max(max(movmean(sz_el4,5)))/40,max(movmean(vol4,5))*10^9/(200*40*(max(max(sz_el4)))),'*','color','c');
+
+plot(max(max(movmean(sz_el5,5)))/50,max(movmean(vol5,5))*10^9/(200*50*(max(max(sz_el5)))),'*','color',[1 0 0]);
+plot(max(max(movmean(sz_el6,5)))/60,max(movmean(vol6,5))*10^9/(200*60*(max(max(sz_el6)))),'*','color',[0.7 0.7 0.7]);
+plot(max(max(movmean(sz_el7,5)))/70,max(movmean(vol7,5))*10^9/(200*70*(max(max(sz_el7)))),'*','color',[0.45 0.9 0.15]);
+plot(max(max(movmean(sz_el8,5)))/80,max(movmean(vol8,5))*10^9/(200*80*(max(max(sz_el8)))),'*','color','k');
+
+ylabel('Max volume uplifted [mm^3] / Volume of max fault column [mm^3]');
+xlabel('Max width [mm] / Model thickness [mm]');
+legend('3 cm','4cm','5cm','6cm','7cm','8cm','Location','northwest');
+grid on;
+hold off
+saveas(h,'max_volume_max_column.pdf')
+clear h
+
+ 
+ 
