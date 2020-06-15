@@ -1,0 +1,50 @@
+%% This script calculates the width of the shear zone
+% Torjus L?mo Ellingsen & Frank Guldstrand 2020
+
+clear all
+
+depth = 50;  % depth in mm 
+load('sz.mat'); % Load presave data
+[T,nr]=size(sz); % find timesteps, nr of rows and columns
+
+%% Make Preallocated save variblae
+% sz=zeros(T,nr);
+sz_el= zeros(T,1);
+disp_thick = zeros(T,1);
+
+%% Analys
+M_sz=min(min(sz(:,:))); % Find Minimum value 
+sz_norm=sz/M_sz; % Normalize
+%% Find number of elements above threshold
+thresh=0.024; % threshold value (from data)
+pxl_size=0.14;    %pixel size in mm
+
+%% Plot width for each timestep in XY diagram
+
+for k=1:T
+    sz_el(k)=sum(sz_norm(k,:)> thresh);
+    noise_temp = sz_norm(k,:)< thresh;
+end
+sz_el=sz_el*pxl_size;        %number of elements times pixel size in mm
+noise = sz_norm(noise_temp);
+noise_level = 4*std(noise);       %level of noise (99,7%), threshold scould be over this level
+clear k
+%% Width/depthwd 
+
+wd =(sz_el)/depth;
+[i,k]= max(movmean(sz_el,5));
+ymax = i/depth;     %normalized to depth, for plot in next script
+xmax = (k*77/140)/depth;
+% plot(xmax,ymax, 'x');
+
+%%
+save('... .mat);
+
+
+%% Plot to check
+% % for k= 1:1:T
+   plot(sz_norm(5,:)); hold on; axis tight; legend('Normalized Shear Strain','Location','NorthEast'); grid on;
+   title('Timestep-7, OS7')
+   xlabel('Pixels')
+   ylabel('Normalized Shear Strain')
+% % % end
