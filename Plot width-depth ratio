@@ -1,0 +1,166 @@
+%% This script plot shear zone width and width/depth ratio
+% Torjus Ellingsen 2020
+
+clear all
+
+
+GB3 = load('GB3.mat');
+GB4 = load('GB4.mat');
+GB5 = load('GB5.mat');
+GB6 = load('GB6.mat');
+GB7 = load('GB7.mat');
+GB8 = load('GB8.mat');
+%% 
+GB3.sz_el=GB3.sz_el;
+GB4.sz_el=GB4.sz_el;
+GB5.sz_el=GB5.sz_el;
+GB6.sz_el=GB6.sz_el;
+GB7.sz_el=GB7.sz_el;
+GB8.sz_el=GB8.sz_el;
+
+[T,sz_el]=size(GB4.sz_el);
+for i= 1:T
+    disp(i) = i/140*78;   %timestep(i)/tot-timestep * tot_displ (mm)
+end
+
+%% Active fault zone width / Displacement
+h = figure;
+
+h1 = plot(disp,movmean(GB3.sz_el,5),'color',[0.91 0.5 0.17]);
+hold on
+h2 = plot(disp,movmean(GB4.sz_el,5),'color','c');
+% hold on
+h3 = plot(disp,movmean(GB5.sz_el,5),'color',[1 0 0]);
+h4 = plot(disp,movmean(GB6.sz_el,5),'color',[0.7 0.7 0.7]);
+% hold on
+h5 = plot(disp,movmean(GB7.sz_el,5),'color',[0.45 0.9 0.15]);
+% 
+h6 = plot(disp,movmean(GB8.sz_el,5),'color','k');
+
+% title('Shear zone width in Olivin sand');
+xlabel('Displacement [mm]');
+ylabel('Width of active shear zone [mm]');
+
+
+lgd = legend([h1,h2,h3,h4,h5,h6],'3 cm','4 cm','5 cm','6 cm','7 cm','8 cm','location','NorthEast');
+lgd.Title.String = 'Model thickness';
+grid on
+hold off
+saveas(h,'Width_development_movemean.pdf')
+clear h
+
+%% Width/model thickness ratio
+h = figure;
+
+h3 = plot(disp,movmean(GB3.sz_el,5)/30,'color',[0.91 0.5 0.17]);
+hold on
+h4 = plot(disp,movmean(GB4.sz_el,5)/40,'color','c');
+h5 = plot(disp,movmean(GB5.sz_el,5)/50,'color',[1 0 0]);
+h6 = plot(disp,movmean(GB6.sz_el,5)/60,'color',[0.7 0.7 0.7]);
+h7 = plot(disp,movmean(GB7.sz_el,5)/70,'color',[0.45 0.9 0.15]);
+h8 = plot(disp,movmean(GB8.sz_el,5)/80,'color','k');
+ 
+% title('Shear zone width/Model thickness');
+xlabel('Displacement [mm]');
+ylabel('Width of active shear zone [mm] / Model thickness [mm]');
+
+lgd = legend([h3,h4,h5,h6,h7,h8],'3 cm','4 cm','5 cm','6 cm','7 cm','8 cm','location','NorthEast');
+lgd.Title.String = 'Model thickness';
+grid on
+hold off
+saveas(h,'Width-model_thickness.pdf')
+clear h
+
+
+%% raw data and movemean
+r=figure;
+
+% r1 = plot(disp,OS3.sz_el,'color',[0.91 0.5 0.17]);
+% hold on
+% r1.Color(4) = 0.3;
+% r11 = plot(disp,movmean(OS3.sz_el,5),'r-','LineWidth',1, 'color',[0.91 0.5 0.17]);
+
+
+% r2 = plot(disp,GB5.sz_el,'color',[1 0 0]);
+% hold on;
+% r2.Color(4) = 0.3;
+% r22 = plot(disp,movmean(GB5.sz_el,5),'r-','LineWidth',1,'color',[1 0 0]);
+
+r3 = plot(disp,GB8.sz_el,'color','k');
+hold on;
+r3.Color(4) = 0.3;
+r33 = plot(disp,movmean(GB8.sz_el,5),'r-','LineWidth',1, 'color','k');
+
+% title('Raw data and movemean');
+xlabel('Displacement [mm]');
+ylabel('Width of active shear zone [mm]');
+title('Glass beads')
+
+lgd = legend([r33],'8 cm','location','NorthEast');
+lgd.Title.String = 'Model thickness';
+grid on;
+hold off
+saveas(r,'Opasity_Width_only8.pdf')
+
+
+
+%%
+OS3_y = GB3.ymax;  
+OS3_x = GB3.xmax;       %obs; timestep, not displacement
+OS4_y = GB4.ymax;
+OS4_x = GB4.xmax;
+OS5_y = GB5.ymax;
+OS5_x = GB5.xmax;
+OS6_y = GB6.ymax;
+OS6_x = GB6.xmax;
+OS7_y = GB7.ymax;
+OS7_x = GB7.xmax;
+OS8_y = GB8.ymax;
+OS8_x = GB8.xmax;
+%% max point/ model thickness plotting
+g = figure;
+g1 = plot(OS3_x,OS3_y,'*','color',[0.91 0.5 0.17]);
+hold on
+g2 = plot(OS4_x,OS4_y,'*','color','c');
+g3 = plot(OS5_x,OS5_y,'*','color',[1 0 0]);
+g4 = plot(OS6_x,OS6_y,'*','color',[0.7 0.7 0.7]);
+g5 = plot(OS7_x,OS7_y,'*','color',[0.45 0.9 0.15]);
+g6 = plot(OS8_x,OS8_y,'*','color','k');
+
+xlabel('Displacement [mm] / Model thickness [mm]')
+ylabel('Max width [mm] / Model thickness [mm]')
+% x = [OS3_x OS4_x OS5_x OS6_x OS7_x OS8_x];
+% y = [OS3_y OS4_y OS5_y OS6_y OS7_y OS8_y];
+% fit = polyfit(x, y, 1);
+% fittedX = linspace(min(x), max(x), 100);
+% fittedY = polyval(fit, fittedX);
+% g7 = plot(fittedX,fittedY, 'r-', 'LineWidth',2);
+legend([g1,g2,g3,g4,g5,g6],'3 cm','4 cm','5 cm','6 cm','7 cm','8 cm','location','Northwest');
+axis([0 0.3 0.5 1]);
+grid on
+hold off
+saveas(g,'maxWidth.model_thickness-disp.model_thickness.pdf')
+clear h
+
+%% Mean of max point
+
+A = [OS3_y,OS4_y,OS5_y,OS6_y,OS7_y,OS8_y];
+GBmean = mean(A);
+GBmax = max(A);
+GBmin = min(A);
+save('/net/lagringshotell/uio/lagringshotell/geofag/students/pgp/torjusle/exp/inter/GB_mean.mat','GBmean','GBmax','GBmin')
+%% Mean & std of shear localization
+
+loc3 = [movmean(GB3.sz_el(90:135),5)/30];
+loc4 = [movmean(GB4.sz_el(90:135),5)/40];
+loc5 = [movmean(GB5.sz_el(90:135),5)/50];
+loc6 = [movmean(GB6.sz_el(90:135),5)/60];
+loc7 = [movmean(GB7.sz_el(90:135),5)/70];
+loc8 = [movmean(GB8.sz_el(90:135),5)/80];
+
+loc = [loc3,loc4,loc5,loc6,loc7,loc8];
+GBmean_loc = mean(loc(:));
+GBstd_loc = 4*std(loc(:));
+GBmax_loc = max(max(loc(:)));
+GBmin_loc = min(min(loc(:)));
+save('/net/lagringshotell/uio/lagringshotell/geofag/students/pgp/torjusle/exp/inter/GB_loc.mat','GBmean_loc','GBmax_loc','GBmin_loc','GBstd_loc')
