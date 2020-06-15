@@ -1,0 +1,554 @@
+%PRESENTDATA
+% presentData.m presents various elevation and displacement data produced
+% with MicMac. Run loadData.m prior to presentData.m to load the data.
+% Format as you please (e.g. adding some x-,y-, and c-axis labels and
+% scales might be a good idea :-)). This script is for fast evaluation of
+% data. For report or presentation purposes make your own script per figure
+% for maximum control.
+%
+%--------------------------------------------------------------------------
+% H. S. Bertelsen            haavasb@fys.uio.no                        2015
+%--------------------------------------------------------------------------
+
+QUAL=['-r200']; %SET IMAGE QUALITY
+
+close all;
+fprintf('\nVisualizing loaded elevation and displacement data:');
+
+set(0,'defaulttextinterpreter','latex')
+%N = numel(timeSteps);
+
+timeSteps = {'000' '001' '002' '003' '004' '005' '006' '007' '008' '009' '010' '011' '012' '013' '014' '015' '016' '017' '018' '019' '020' '021' '022' '023' '024' '025' '026' '027' '028' '029' '030' '031' '032' '033' '034' '035' '036' '037' '038' '039' '040' '041' '042' '043' '044' '045' '046' '047' '048' '049' '050' '051' '052' '053' '054' '055' '056' '057' '058' '059' '060' '061' '062' '063' '064' '065' '066' '067' '068' '069' '070' '071' '072' '073' '074' '075' '076' '077' '078' '079' '080' '081' '082' '083' '084' '085' '086' '087' '088' '089' '090' '091' '092' '093' '094' '095' '096' '097' '098' '099' '100' '101' '102' '103' '104' '105' '106' '107' '108' '109' '110' '111' '112' '113' '114' '115' '116' '117' '118' '119' '120' '121' '122' '123' '124' '125' '126' '127' '128' '129' '130' '131' '132' '133' '134' '135' '136' '137' '138' '139' '140'};
+% timeSteps = {'000' '001' '002' '003' '004' '005' '006' '007' '008' '009' '010' '011' '012' '013' '014' '015' '016' '017' '018' '019' '020' '021' '022' '023' '024' '025' '026' '027' '028' '029' '030' '031' '032' '033' '034' '035' '036' '037' '038' '039' '040' '041' '042' '043' '044' '045' '046' '047' '048' '049' '050' '051' '052' '053' '054' '055' '056' '057' '058' '059' '060' '061' '062' '063' '064' '065' '066' '067' '068' '069' '070' '071' '072' '073' '074' '075' '076' '077' '078' '079' '080' '081' '082' '083' '084' '085' '086' '087' '088' '089' '090' '091' '092' '093' '094' '095' '096' '097' '098' '099' '100'};
+% timeSteps = {'000' '001' '002' '003' '004' };%'005' '006' '007' '008' '009' '010' '011' '012' '013' '014' '015' '016' '017' '018' '019' '020' '021' '022' '023' '024' '025' '026' '027' '028' '029' '030'};
+
+
+threshold = 0.2;                    % Threshold for removing outliers
+T = length(timeSteps);
+
+
+% Extract scaling parameters from XML
+rootFolder = ['output' filesep ];
+folderName = strcat(rootFolder,{'000'},filesep);
+pathXML = strcat(folderName,'DEM.xml');
+pathXML = pathXML{1};
+tagName = 'OrigineAlti';
+originAlti = parseXML(pathXML,tagName);
+tagName = 'ResolutionAlti';
+resolutionAlti = parseXML(pathXML,tagName);
+tagName = 'NombrePixels';
+nPixels = parseXML(pathXML,tagName);
+nPxlCol = nPixels(1);
+nPxlRow = nPixels(2);
+
+% Initialize
+data = load('data.mat');
+x = data.x;
+y = data.y;
+X = data.X;
+Y = data.Y;
+x_max = data.x_max;
+x_min = data.x_min;
+displ_DEM = data.displ_DEM;
+
+smooth_param = load('smooth_param.mat');
+smooth_param_shear = smooth_param.smooth_param_shear;
+smooth_param_div = smooth_param.smooth_param_div;
+smooth_param_UDEM = smooth_param.smooth_param_UDEM;
+% load('smooth_param.mat','smooth_param_shear','smooth_param_div','smooth_param_UDEM')
+
+%% Set colorscales extrema uniformly for all time steps
+cmin_DEM = data.cmin_DEM;
+cmax_DEM = data.cmax_DEM;
+
+cmin_U_DEM = data.cmin_U_DEM;
+cmax_U_DEM = data.cmax_U_DEM;
+
+cmin_U_DEM_smooth = data.cmin_U_DEM_smooth;
+cmax_U_DEM_smooth = data.cmax_U_DEM_smooth;
+
+cmin_U_x = data.cmin_U_x;
+cmax_U_x = data.cmax_U_x;
+
+cmin_U_y = data.cmin_U_y;
+cmax_U_y = data.cmax_U_y;
+
+cmin_divergence = data.cmin_divergence;
+cmax_divergence = data.cmin_divergence;
+
+cmin_divergence_smoothed = data.cmin_divergence_smoothed;
+cmax_divergence_smoothed = data.cmax_divergence_smoothed;
+
+cmin_shear_strain = data.cmin_shear_strain;
+cmax_shear_strain = data.cmax_shear_strain;
+
+cmin_shear_strain_smoothed = data.cmin_shear_strain_smoothed;
+cmax_shear_strain_smoothed = data.cmax_shear_strain_smoothed;
+
+
+cmin_shear_strain_cum_smoothed = data.cmin_shear_strain_cum_smoothed;
+cmax_shear_strain_cum_smoothed = data.cmax_shear_strain_cum_smoothed;
+
+
+
+% %% DEM evolution
+%  fprintf('\nDEM...');
+%  figDEM = figure;
+%  mkdir('11.DEM')
+%  
+%  for n = 1:T
+%      folderName = strcat(rootFolder,timeSteps(n),filesep);
+%      fprintf(['\n-> Processing DEM in folder ' folderName{1}]);
+%      imgName = strcat(folderName,'DEM.tif');
+%      imgName = imgName{1};
+%      img = imread(imgName);
+%      img = double(img) * resolutionAlti + originAlti;
+%      if n == 1
+%          initElevation = mean(mean(img));   % Def mean init elevation as 0
+%      end
+%      img = img - initElevation;
+%      img(img < -threshold | img > threshold) = NaN;
+%      DEM(:,:) = img;
+%  
+%      imagesc(x(x_min:x_max),y,DEM(:,x_min:x_max)), axis equal, axis tight 
+%      ax = gca;
+%      ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});  %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','5','0'});      %y-axis 
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%         
+%      colormap(ax,parula);
+%      caxis([cmin_DEM cmax_DEM])
+%      titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%      title(titleText)
+%  
+%      if n == 1 % Nice scalebar for initial picture
+%          hold on
+%          plot([x(x_min)+0.01 x(x_min)+0.11],[y(end)-0.01 y(end)-0.01],'-k','LineWidth',2)
+%          text(x(1)+0.03,y(end)-0.015, '10 cm', 'HorizontalAlignment','center')
+%          hold off
+%      end
+%      suptitle('DEM [m]');
+%      c = colorbar;
+%      c.Label.String = ' Elevation [m]'
+% 
+% 
+%      filename=['11.DEM/DEM_',timeSteps{n},'.jpg'];
+%      print('-painters','-djpeg',QUAL,filename)
+%      close all
+%  end
+% 
+% 
+% %% U_DEM
+% fprintf('\nU_DEM...');
+% figU_DEM = figure;
+% mkdir('12.U_DEM')
+% % origin = 0;
+% % fringeStep = (cmax_U_DEM - cmin_U_DEM) / 5;
+% % numColors = 50;
+% % cMap = fringeColorMap(cmin_U_DEM,cmax_U_DEM,origin,fringeStep,numColors);
+% for n = 1:T
+%     folderName = strcat(rootFolder,timeSteps(n),filesep);
+%     fprintf(['\n-> Processing U_DEM in folder ' folderName{1}]);
+%     imgName = strcat(folderName,'DEM.tif');
+%     imgName = imgName{1};
+%     img = imread(imgName);
+%     img = double(img) * resolutionAlti + originAlti;
+%     if n == 1
+%         initElevation = mean(mean(img));   % Def mean init elevation as 0
+%     end
+%     img = img - initElevation;
+%     img(img < -threshold | img > threshold) = NaN;
+%     DEM(:,:) = img;
+%     
+%     if n==1
+%         DEM_1 = DEM(:,x_min:x_max);
+%     else
+%         imagesc(x(x_min:x_max),y,DEM(:,x_min:x_max)-DEM_1), axis equal, axis tight
+%         ax = gca;
+%         ax.XTick = [.10 .15 .20 .25 .30];
+%         ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%         ax.YTick = [.15 .20 .25];
+%         ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+%         ax.XLabel.String = 'x [cm]';
+%         ax.YLabel.String = 'y [cm]';
+%         %   colormap(ax,cMap);
+%         colormap(ax,darkb2r(cmin_U_DEM,cmax_U_DEM));
+%         titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%         title(titleText)
+%         
+%         suptitle('$\Delta$DEM [m]');
+%         c = colorbar;
+%         c.Label.String = ' Elevation [m]'
+%         filename=['12.U_DEM/U_DEM_',timeSteps{n},'.jpg'];
+%         print('-painters','-djpeg',QUAL,filename)
+%         close all
+%     end
+% end
+% 
+%% U_DEM_smooth
+fprintf('\nU_DEM_smooth...');
+figU_DEM = figure;
+mkdir('13.U_DEM_smooth')
+U_DEM_save = zeros(T-1,nPxlRow,nPxlCol);
+for n = 1:T
+    folderName = strcat(rootFolder,timeSteps(n),filesep);
+    fprintf(['\n-> Processing U_DEM_smooth in folder ' folderName{1}]);
+    imgName = strcat(folderName,'DEM.tif');
+    imgName = imgName{1};
+    img = imread(imgName);
+    img = double(img) * resolutionAlti + originAlti;
+    if n == 1
+        initElevation = mean(mean(img));   % Def mean init elevation as 0
+    end
+    img = img - initElevation;
+    img(img < -threshold | img > threshold) = NaN;
+    DEM(:,:) = img;
+    
+    if n==1
+        DEM_1_smooth = smooth2a(DEM(:,x_min:x_max),smooth_param_UDEM,smooth_param_UDEM);
+    else
+        imagesc(x(x_min:x_max),y,smooth2a(DEM(:,x_min:x_max),smooth_param_UDEM,smooth_param_UDEM)-DEM_1_smooth), axis equal, axis tight
+        ax = gca;
+        ax.XTick = [.10 .15 .20 .25 .30];
+        ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+        ax.YTick = [.15 .20 .25];
+        ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+        ax.XLabel.String = 'x [cm]';
+        ax.YLabel.String = 'y [cm]';
+        %   colormap(ax,cMap);
+        colormap(ax,darkb2r(cmin_U_DEM_smooth,cmax_U_DEM_smooth));
+        titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+        title(titleText)
+        
+        suptitle('$\Delta$DEM smooth [mm]');
+        c = colorbar;
+        c.Label.String = ' Elevation [mm]'
+        filename=['13.U_DEM_smooth/U_DEM_smooth',timeSteps{n},'.jpg'];
+        print('-painters','-djpeg',QUAL,filename)
+% %        
+           U_DEM_save(n-1,:,:) = smooth2a(DEM(:,x_min:x_max),smooth_param_UDEM,smooth_param_UDEM)-DEM_1_smooth;
+          
+          
+        close all
+    end
+end
+%% Save U_DEM_save
+
+% [T,nr,nc]=size(U_DEM_save); % find timesteps, rows and columns
+% 
+% %% Make Preallocated save variblae
+% max5=zeros(T,1);
+% min5=zeros(T,1);
+% vol5=zeros(T,1);
+% 
+% pxl_size = 0.00014;  % in meter
+% 
+% 
+% %% Max/min & integration per timestep
+% for k=1:1:T
+%      max5(k,:) = max(max(squeeze(U_DEM_save(k,:,:))));                 
+%      min5(k,:) = min(min(squeeze(U_DEM_save(k,:,:))));
+%   
+%      DEM = squeeze(U_DEM_save(k,:,:));
+%      noise_area = [DEM(1:100,:);DEM(500:710,:)];                   % area outside of shear zone
+%      noise_up = nanmean(noise_area(:)) + 4*nanstd(noise_area(:));            % level of nois, this is threshold
+%      DEM(DEM< noise_up) = NaN;                                       % values below threshold = NaN
+%      vol5(k,:) = sum(nansum(DEM.*(pxl_size^2)));                  %integate data above threshold. square pixel and cubic mm. 
+% 
+% end; clear k
+% %% negative volume
+% for k=1:1:T
+%      DEM = squeeze(U_DEM_save(k,:,:));
+%      noise_area = [DEM(1:100,:);DEM(400:700,:)];                   % area outside of shear zone
+%      noise_down = -(nanmean(noise_area(:)) + 4*nanstd(noise_area(:)));            % level of nois, this is threshold
+%      DEM(DEM > noise_down) = NaN;                                       % values below threshold = NaN
+%      vol5_down(k,:) = sum(nansum(DEM.*(pxl_size^2)));
+%      clear k
+% end
+% %%
+% fprintf('\nSave U_DEM data, take often some time.\n')
+% save('/net/lagringshotell/uio/lagringshotell/geofag/students/pgp/torjusle/exp/GB/data_analysis/DEM5.mat','max5','min5','vol5','vol5_down');
+fprintf('\nDone saving.\n')
+
+%% U_x
+% fprintf('\nU_x...');
+% figU_x = figure;
+% mkdir('1.U_X')
+% 
+% 
+% for n = 2:T
+%     folderName = strcat(rootFolder,timeSteps(n),filesep);
+%     fprintf(['\n-> Processing U_X in folder ' folderName{1}]);
+%     imgName = strcat(folderName,'U_X.tif');
+%     imgName = imgName{1};
+%     img = imread(imgName);
+%     img = double(img) * resolutionAlti;
+%     img(img < -threshold | img > threshold) = NaN;
+%     u_x = img;
+%     U_X(:,:) = img;
+%     
+%     imagesc(x(:,x_min:x_max-1),y,U_X(:,x_min:x_max-1)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%      %colormap(ax,cMap);
+%     colormap(ax,darkb2r(cmin_U_x,cmax_U_x));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('$U_x$ [m]');
+%     c = colorbar;
+%     filename=['1.U_X/U_X_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     close all
+% end
+% 
+% 
+% %% U_y
+% fprintf('\nU_y...');
+% figU_y = figure;
+% mkdir('2.U_Y')
+% 
+% for n = 2:T
+%     folderName = strcat(rootFolder,timeSteps(n),filesep);
+%     fprintf(['\n-> Processing U_Y in folder ' folderName{1}]);
+%     imgName = strcat(folderName,'U_Y.tif');
+%     imgName = imgName{1};
+%     img = imread(imgName);
+%     img = double(img) * resolutionAlti;
+%     img(img < -threshold | img > threshold) = NaN;
+%     U_Y = img;
+%     
+%     imagesc(x(:,x_min:x_max-1),y,U_Y(:,x_min:x_max-1)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%      %   colormap(ax,cMap);
+%     colormap(ax,darkb2r(cmin_U_y,cmax_U_y));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('$U_y$ [m]');
+%     c = colorbar;
+%     filename=['2.U_Y/U_Y_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     close all
+% end
+
+
+% %% Shear strain
+% T = length(timeSteps);
+% figShear = figure;
+% % mkdir('3.Shear_Strain')
+% mkdir('4.Shear_Strain_Smoothed')
+% % mkdir('5.Divergence')
+% % mkdir('6.Divergence_Smoothed')
+% % mkdir('7.Shear_Strain_Cum_Smoothed')
+% % mkdir('8.Shear_Strain_Smoothed_scaled')
+% % 
+% shear_strain_save = zeros(T-1,nPxlRow-1,nPxlCol-1);
+% 
+% for n = 2:T
+%     folderName = strcat(rootFolder,timeSteps(n),filesep);
+%     fprintf(['\n-> Processing shear strain in folder ' folderName{1}]);
+%     imgName = strcat(folderName,'U_X.tif');
+%     imgName = imgName{1};
+%     img = imread(imgName);
+%     img = double(img) * resolutionAlti;
+%     img(img < -threshold | img > threshold) = NaN;
+%     u_x = img;
+%     imgName = strcat(folderName,'U_Y.tif');
+%     imgName = imgName{1};
+%     img = imread(imgName);
+%     img = double(img) * resolutionAlti;
+%     img(img < -threshold | img > threshold) = NaN;
+%     u_y = img;
+% 
+%     
+%     [dUxdx,dUxdy]= gradient(u_x,resolutionAlti,resolutionAlti);
+%     [dUydx,dUydy]= gradient(u_y,resolutionAlti,resolutionAlti);
+%     shear_strain(:,:) = 1/2*(dUxdy+dUydx);
+%     divergence(:,:) = (dUxdx+dUydy);
+% %     
+% %    %% Save options
+% %     
+% % %     shear_strain_save(n-1,:,:) = shear_strain; %%regular
+%     shear_strain_save(n-1,:,:) =  smooth2a(shear_strain(:,x_min:x_max-1), smooth_param_shear, smooth_param_shear); %smoothed
+%       
+% %save scaled
+% %       shear_strain_smooth_temp = smooth2a(shear_strain(:,x_min:x_max-1), smooth_param_shear, smooth_param_shear);
+% %       cmin_shear_strain_temp = min(min(shear_strain(:,:)));
+% %       scaled_shear_strain(:,:) = (shear_strain_smooth_temp)/(abs(cmin_shear_strain_temp));
+% %       shear_strain_save(n-1,:,:) =  scaled_shear_strain(:,:,:);               %save matrix to shear width calculations
+% %%
+% 
+%     if n==2
+%         shear_strain_cum = shear_strain;
+%     else
+%         shear_strain_cum = shear_strain_cum + shear_strain;
+%     end
+%     
+%     %% Shear strain
+% 
+%     fprintf('\nShear strain...');
+%     imagesc(x(x_min:x_max-1),y,shear_strain(:,x_min:x_max-1)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%      colormap(ax,darkb2r(cmin_shear_strain,cmax_shear_strain));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('Shear strain: $\frac{1}{2}\left(\frac{\partial U_x}{\partial y} + \frac{\partial U_y}{\partial x}\right)$');
+%     c = colorbar;
+%     c.Label.String = '[\gamma]'
+%     filename=['3.Shear_Strain/Shear_Strain_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     close all
+%     
+    %% Shear strain smoothed
+% % 
+%     fprintf('\nShear strain smoothed...');
+%     imagesc(x(x_min:x_max-1),y,smooth2a(shear_strain(:,x_min:x_max-1), smooth_param_shear, smooth_param_shear)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','05','0'});                              %y-axis    
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%      colormap(ax,darkb2r(cmin_shear_strain_smoothed,cmax_shear_strain_smoothed));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('Shear strain smoothed: $\frac{1}{2}\left(\frac{\partial U_x}{\partial y} + \frac{\partial U_y}{\partial x}\right)$');
+%     c = colorbar;
+%     c.Label.String = '[\gamma]'
+%     filename=['4.Shear_Strain_Smoothed/Shear_Strain_Smoothed_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     
+%     
+%     close all
+
+%         %% Shear strain smoothed scaled
+% 
+%     fprintf('\nShear strain smoothed scaled...');
+%     shear_strain_smooth_temp = smooth2a(shear_strain(:,x_min:x_max-1), smooth_param_shear, smooth_param_shear);
+%     cmin_shear_strain_temp = min(min(shear_strain(:,:)));
+%     scaled_shear_strain(:,:) = (shear_strain_smooth_temp)/(abs(cmin_shear_strain_temp));
+%     imagesc(x(x_min:x_max-1),y,scaled_shear_strain(:,:)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%     colormap(ax,darkb2r(-.3,0));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('Shear strain smoothed scaled: $\frac{1}{2}\left(\frac{\partial U_x}{\partial y} + \frac{\partial U_y}{\partial x}\right)$');
+%     c = colorbar;
+%     c.Label.String = '[\gamma]'
+%     filename=['8.Shear_Strain_Smoothed_scaled/Shear_Strain_Smoothed_scaled',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%       
+% %     shear_strain_save(n-1,:,:) =  scaled_shear_strain(:,:,:);               %save matrix to shear width calculations
+% 
+%     close all
+% 
+% 
+%     
+%     %% Shear strain cumul smoothed
+% 
+%     fprintf('\nShear strain cumulated smoothed...');
+%     imagesc(x(x_min:x_max-1),y,smooth2a(shear_strain_cum(:,x_min:x_max-1), smooth_param_shear, smooth_param_shear)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [.10 .15 .20 .25 .30];
+%      ax.XTickLabel = ({'0','5','10','15','20'});               %x-axis
+%      ax.YTick = [.15 .20 .25];
+%      ax.YTickLabel = ({'10','5','0'});                              %y-axis    
+%      ax.XLabel.String = 'x [cm]';
+%      ax.YLabel.String = 'y [cm]';
+%      colormap(ax,darkb2r(-0.8,0));    %colormap(ax,darkb2r(cmin_shear_strain_cum_smoothed,cmax_shear_strain_cum_smoothed));
+%     
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('Shear strain cumulated smoothed: $\frac{1}{2}\left(\frac{\partial U_x}{\partial y} + \frac{\partial U_y}{\partial x}\right)$');
+%     c = colorbar;
+%     c.Label.String = 'Relative strain [\gamma]'
+%     filename=['7.Shear_Strain_Cum_Smoothed/Shear_Strain_Cum_Smoothed_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     close all
+
+ %% Divergence
+% 
+%     fprintf('\nDivergence...');
+%     imagesc(x(x_min:x_max-1),y,divergence(:,x_min:x_max-1)), axis equal, axis tight
+%   v
+ax = gca;
+%     ax.XTick = [];
+%     ax.YTick = [];
+%     ax.XLabel.String = 'x [cm]';
+%     ax.YLabel.String = 'y [cm]';
+%     colormap(ax,darkb2r(cmin_divergence,cmax_divergence));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('Divergence: $\frac{\partial U_x}{\partial x} + \frac{\partial U_y}{\partial y}$');
+%     c = colorbar;
+%     filename=['5.Divergence/Divergence_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     close all
+%     
+%     %% Divergence smoothed
+% 
+%     fprintf('\nDivergence smoothed...');
+%     imagesc(x(x_min:x_max-1),y,smooth2a(divergence(:,x_min:x_max-1), smooth_param_div, smooth_param_div)), axis equal, axis tight
+%     ax = gca;
+%     ax.XTick = [];
+%     ax.YTick = [];
+%     colormap(ax,darkb2r(cmin_divergence_smoothed,cmax_divergence_smoothed));
+%     titleText = sprintf(['Displacement: ', num2str(displ_DEM(n)*1000), ' mm']);
+%     title(titleText)
+%     
+%     suptitle('Divergence smoothed: $\frac{\partial U_x}{\partial x} + \frac{\partial U_y}{\partial y}$');
+%     c = colorbar;
+%     filename=['6.Divergence_Smoothed/Divergence_Smoothed_',timeSteps{n},'.jpg'];
+%     print('-painters','-djpeg',QUAL,filename)
+%     close all
+
+    
+% end
+% % 
+% [T,nr,nc]=size(shear_strain_save);
+% sz=zeros(T,nr);
+% %% Sum along rows to get cumulative shearzone per timestep
+% for k=1:1:T
+%     sz(k,:)=sum(squeeze(shear_strain_save(k,:,:)),2);
+%     
+% end;
+% fprintf('\nSave data, take often some time.\n')
+% save('sz.mat','sz')           %save matrix to shear width calculations
+
+fprintf('\nDone!\n')
+
+% How to save as high quality (however, not properly cropped) pdf:
+% print -painters -dpdf -r600 product.pdf
