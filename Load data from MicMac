@@ -1,0 +1,255 @@
+%LOADDATA
+% loadData.m loads and formats various elevation and displacement data
+% produced with MicMac. Set input and initialize according to data.
+%
+%--------------------------------------------------------------------------
+% H. S. Bertelsen            haavasb@fys.uio.no                   2015-2017
+%--------------------------------------------------------------------------
+
+clear all;
+fprintf('\nLoading and formating elevation and displacement data:\n');
+
+timeSteps = {'000' '001' '002' ... 'n'};
+
+threshold = 0.2;                    % Threshold for removing outliers
+T = length(timeSteps);
+
+Tot_disp = 0.078;    % Total displacement (meter)
+                    % displacement increment calculations
+increm    = Tot_disp / (size(timeSteps,2) - 1); 
+      %Initiates the vector of displacements per each time step for DEMs
+displ_DEM = zeros(1,size(timeSteps,2)); 
+
+displ_DEM(2:end)=increm; displ_DEM=cumsum(displ_DEM);
+
+% Bounding box coordinates in meters
+xMin = 0.10;
+xMax = 0.30;
+yMin = 0.15;
+yMax = 0.25;
+
+%% Initialize
+rootFolder = ['output' filesep ];
+smooth_param_shear    = 6;
+smooth_param_div      = 15;
+smooth_param_UDEM     = 12; %changed between 6-12
+save('smooth_param.mat','smooth_param_shear',
+'smooth_param_div','smooth_param_UDEM') 
+
+% Extract scaling parameters from XML
+folderName = strcat(rootFolder,{'000'},filesep);
+pathXML = strcat(folderName,'DEM.xml');
+pathXML = pathXML{1};
+tagName = 'OrigineAlti';
+originAlti = parseXML(pathXML,tagName); %original zero elevation
+tagName = 'ResolutionAlti';
+resolutionAlti = parseXML(pathXML,tagName);
+tagName = 'NombrePixels';
+nPixels = parseXML(pathXML,tagName);
+nPxlCol = nPixels(1);       %number of pixels
+nPxlRow = nPixels(2);       %number of pixels
+
+% Figure scaling                        % numb of pix and real meter of box     
+x = xMin:(xMax-xMin)/(nPxlCol-1):xMax;
+y = yMin:(yMax-yMin)/(nPxlRow-1):yMax;  
+[X, Y] = meshgrid(x, y);        % creates a matrix of x/y
+x_max = length(x);
+x_min = 1;
+
+% Allocate memory to variables  %creates empty matrixes to fill in later
+T = length(timeSteps);                  
+DEM = zeros(T,nPxlRow,nPxlCol);
+U_DEM = zeros(T-1,nPxlRow,nPxlCol);
+U_X = zeros(T-1,nPxlRow-1,nPxlCol-1);
+U_Y = zeros(T-1,nPxlRow-1,nPxlCol-1);
+shear_strain = zeros(T-1,nPxlRow-1,nPxlCol-1);
+scaled_shear_strain = zeros(T-1,nPxlRow-1,nPxlCol-1);
+shear_strain_cum = zeros(T-1,nPxlRow-1,nPxlCol-1);
+divergence = zeros(T-1,nPxlRow-1,nPxlCol-1);
+
+
+%% Load and format elevation and displacement data
+for t = 1:T                         %T=lenght(timeSteps)
+     folderName = strcat(rootFolder,timeSteps(t),filesep);
+     disp(['-> Processing folder ' folderName{1}]);
+
+%%% Digital elevation model
+    imgName = strcat(folderName,'DEM.tif');
+    imgName = imgName{1};
+    img = imread(imgName);
+    img = double(img) * resolutionAlti + originAlti;
+    
+    if t == 1
+        img(img < -threshold | img > threshold) = NaN;
+        initElevation = nanmean(nanmean(img));   
+        % Def mean init elevation as 0 %
+        % Z-distance from GCP to surface, should be negative
+        
+    end
+    
+    img(img < -threshold | img > threshold) = NaN;
+    img = img - initElevation;              
+                        %img - (-) = lifts the surface up to GCP level
+    DEM(t,:,:) = img;                       %3D matrix
+    
+     % SET COLORBAR 
+ if t==1
+        cmin_DEM = min(min(DEM(t,:,:)));
+        cmax_DEM = max(max(DEM(t,:,:)));
+        DEM_1    = (DEM(t,:,:));   %error with squeeze function % squeeze(DEM(t,:,:));  %test--> figure; pcolor(DEM_1); shading flat;
+        DEM_1_smooth = smooth2a(squeeze(DEM(t,:,:)),smooth_param_UDEM,smooth_param_UDEM);
+    else 
+        if cmin_DEM > min(min(DEM(t,:,:)))   %DEM(t,:,:)))
+            cmin_DEM = min(min(DEM(t,:,:)));
+        end
+        if cmax_DEM < max(max(DEM(t,:,:)))
+            cmax_DEM = max(max(DEM(t,:,:)));
+        end
+        
+    end
+    
+    if t>1
+    
+    %%% U_Digital elevation model
+        U_DEM(t-1,:,:) = DEM(t,:,:) - DEM_1;   % calculates not for initial timestep
+        U_DEM_smooth(t-1,:,:) = smooth2a(squeeze(DEM(t,:,:)),smooth_param_UDEM,smooth_param_UDEM) - DEM_1_smooth;  %smooth function %used squeeze function
+        
+        if t==2
+            cmin_U_DEM = min(min(U_DEM(t-1,:,:)));
+            cmax_U_DEM = max(max(U_DEM(t-1,:,:)));
+            cmin_U_DEM_smooth = min(min(U_DEM_smooth(t-1,:,:)));
+            cmax_U_DEM_smooth = max(max(U_DEM_smooth(t-1,:,:)));
+        else
+            if cmin_U_DEM > min(min(U_DEM(t-1,:,:)))
+                cmin_U_DEM = min(min(U_DEM(t-1,:,:)));
+            end
+            if cmax_U_DEM < max(max(U_DEM(t-1,:,:)))
+                cmax_U_DEM = max(max(U_DEM(t-1,:,:)));
+            end
+            if cmin_U_DEM_smooth > min(min(U_DEM_smooth(t-1,:,:)))
+                cmin_U_DEM_smooth = min(min(U_DEM_smooth(t-1,:,:)));
+            end
+            if cmax_U_DEM_smooth < max(max(U_DEM_smooth(t-1,:,:)))
+                cmax_U_DEM_smooth = max(max(U_DEM_smooth(t-1,:,:)));
+            end
+        end
+
+        
+        %%% Horizontal displacement fields
+        % x-displacement field
+        imgName = strcat(folderName,'U_X.tif');
+        imgName = imgName{1};
+        img = imread(imgName);
+        img = double(img) * resolutionAlti;
+        img(img < -threshold | img > threshold) = NaN;
+        u_x = img;
+        U_X(t-1,:,:) = img;                       %added t in ()
+        if t==2
+            cmin_U_x = min(min(U_X(:,x_min:x_max)));
+            cmax_U_x = max(max(U_X(:,x_min:x_max)));
+        else
+            if cmin_U_x > min(min(U_X(:,x_min:x_max)))
+                cmin_U_x = min(min(U_X(:,x_min:x_max)));
+            end
+            if cmax_U_x < max(max(U_X(:,x_min:x_max)))
+                cmax_U_x = max(max(U_X(:,x_min:x_max)));
+            end
+        end
+        
+        
+        % y-displacement field
+        imgName = strcat(folderName,'U_Y.tif');
+        imgName = imgName{1};
+        img = imread(imgName);
+        img = double(img) * resolutionAlti;
+        img(img < -threshold | img > threshold) = NaN;
+        u_y = img;
+        U_Y(t-1,:,:) = img;  
+        img = -img; % Sign convention ...
+        if t==2
+            cmin_U_y = min(min(U_Y(:,x_min:x_max)));
+            cmax_U_y = max(max(U_Y(:,x_min:x_max)));
+        else
+            if cmin_U_y > min(min(U_Y(:,x_min:x_max)))
+                cmin_U_y = min(min(U_Y(:,x_min:x_max)));
+            end
+            if cmax_U_y < max(max(U_Y(:,x_min:x_max)))
+                cmax_U_y = max(max(U_Y(:,x_min:x_max)));
+            end
+        end
+        
+        
+        %%% Cauchy tensorial strain components, horizontal plane
+        % Using engineering convention for shear strain
+        [dUxdx,dUxdy]= gradient(u_x,resolutionAlti,resolutionAlti);
+        [dUydx,dUydy]= gradient(u_y,resolutionAlti,resolutionAlti);
+        divergence(t-1,:,:) = (dUxdx+dUydy);                          
+        shear_strain(t-1,:,:) = 1/2*(dUxdy+dUydx);
+        
+        
+        cmin_shear_strain_temp = min(min(squeeze(shear_strain(t-1,:,:))));
+        cmax_shear_strain_temp = max(max(squeeze(shear_strain(t-1,:,:))));
+        cmin_divergence_temp = min(min(squeeze(divergence(t-1,:,:))));
+        cmax_divergence_temp = max(max(squeeze(divergence(t-1,:,:))));
+        cmin_shear_strain_smoothed_temp = min(min(smooth2a(squeeze(shear_strain(t-1,:,:)),smooth_param_shear,smooth_param_shear)));
+        cmax_shear_strain_smoothed_temp = max(max(smooth2a(squeeze(shear_strain(t-1,:,:)),smooth_param_shear,smooth_param_shear)));
+        cmin_divergence_smoothed_temp = min(min(smooth2a(squeeze(divergence(t-1,:,:)),smooth_param_div,smooth_param_div)));
+        cmax_divergence_smoothed_temp = max(max(smooth2a(squeeze(divergence(t-1,:,:)),smooth_param_div,smooth_param_div)));
+        
+        
+        
+        if t==2
+           cmin_shear_strain = cmin_shear_strain_temp;
+            cmax_shear_strain = cmax_shear_strain_temp;
+            cmin_divergence = cmin_divergence_temp;
+            cmax_divergence = cmax_divergence_temp;
+            cmin_shear_strain_smoothed = cmin_shear_strain_smoothed_temp;
+            cmax_shear_strain_smoothed = cmax_shear_strain_smoothed_temp;
+            cmin_divergence_smoothed = cmin_divergence_smoothed_temp;
+            cmax_divergence_smoothed = cmax_divergence_smoothed_temp;
+            shear_strain_cum = shear_strain(t-1,:,:);
+            
+        else
+            if cmin_shear_strain > cmin_shear_strain_temp
+                cmin_shear_strain = cmin_shear_strain_temp;
+            end
+            if cmax_shear_strain < cmax_shear_strain_temp
+                cmax_shear_strain = cmax_shear_strain_temp;
+             end
+            if cmin_shear_strain_smoothed > cmin_shear_strain_smoothed_temp
+                cmin_shear_strain_smoothed = cmin_shear_strain_smoothed_temp;
+            end
+            if cmax_shear_strain_smoothed < cmax_shear_strain_smoothed_temp
+                cmax_shear_strain_smoothed = cmax_shear_strain_smoothed_temp;
+            
+            if cmin_divergence > cmin_divergence_temp
+                cmin_divergence = cmin_divergence_temp;
+            end
+            if cmax_divergence < cmax_divergence_temp
+                cmax_divergence = cmax_divergence_temp;
+            end
+            if cmin_divergence_smoothed > cmin_divergence_smoothed_temp
+                cmin_divergence_smoothed = cmin_divergence_smoothed_temp;
+            end
+            if cmax_divergence_smoothed > cmax_divergence_smoothed_temp
+                cmax_divergence_smoothed = cmax_divergence_smoothed_temp;
+            end
+            
+            
+            if t>2
+            shear_strain_cum = shear_strain_cum + shear_strain(t-1,:,:);     
+            end
+            
+%             scaled_shear_strain(t-1,:,:) = (shear_strain(t-1,:,:))/abs(cmin_shear_strain_temp);
+        
+        end
+    end
+end      
+end
+
+cmin_shear_strain_cum_smoothed = min(min(smooth2a(squeeze(shear_strain_cum(end,:,:)),smooth_param_shear,smooth_param_shear)));
+cmax_shear_strain_cum_smoothed = max(max(smooth2a(squeeze(shear_strain_cum(end,:,:)),smooth_param_shear,smooth_param_shear)));
+
+fprintf('\n-> Saving data!')
+
+save('data.mat','displ_DEM','x','y','X','Y','x_max','x_min','cmin_DEM','cmax_DEM','cmin_U_DEM','cmax_U_DEM','cmin_U_DEM_smooth','cmax_U_DEM_smooth','cmin_U_x','cmax_U_x','cmin_U_y','cmax_U_y','cmin_divergence','cmax_divergence','cmin_divergence_smoothed','cmax_divergence_smoothed','cmin_shear_strain','cmax_shear_strain','cmin_shear_strain_smoothed','cmax_shear_strain_smoothed','cmin_shear_strain_cum_smoothed','cmax_shear_strain_cum_smoothed')
